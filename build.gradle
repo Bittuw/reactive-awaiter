@@ -1,0 +1,123 @@
+buildscript {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        jcenter()
+        maven { url 'https://projectlombok.org/edge-releases' }
+    }
+    dependencies {
+        classpath("io.spring.gradle:dependency-management-plugin:${dependencyManagementPluginVersion}")
+    }
+}
+repositories {
+    gradlePluginPortal()
+    mavenCentral()
+    jcenter()
+    maven { url 'https://projectlombok.org/edge-releases' }
+}
+
+ext.getGitHash = { ->
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--short', 'HEAD'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
+group 'com.bittuw'
+version '0.0.1'
+description = """This is library provide different types of reactive context synchronization"""
+
+apply plugin: 'idea'
+apply plugin: 'maven'
+apply plugin: 'java-library'
+apply plugin: 'io.spring.dependency-management'
+
+sourceCompatibility = 12
+targetCompatibility = 12
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+    }
+}
+
+jar {
+    archiveBaseName.set 'reactive-awaiter'
+    archiveVersion.set project.version.toString()
+    archiveFileName.set "${archiveBaseName.get()}-${archiveVersion.get()}.${archiveExtension.get()}"
+    manifest {
+        attributes 'Name': 'com/bittuw/reactive/awaiter',
+                'Specification-Title': 'Reactive-Awaiter',
+                'Specification-Version': archiveVersion.get(),
+                'Specification-Vendor': "Nikita Dmitriev",
+                'Implementation-Title': 'com.bittuw.reactive.awaiter',
+                'Implementation-Version': archiveVersion.get(),
+                'Implementation-Vendor': "Nikita Dmitriev"
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src/main/java'
+        }
+    }
+    test {
+        java {
+            srcDir 'src/test/java'
+        }
+    }
+}
+
+
+dependencies {
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.projectlombok:lombok:edge-SNAPSHOT'
+
+    implementation 'org.projectlombok:lombok:edge-SNAPSHOT'
+    implementation 'io.projectreactor.addons:reactor-extra'
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+    implementation 'org.slf4j:slf4j-api'
+    
+    api 'org.springframework:spring-core'
+    api 'io.projectreactor:reactor-core'
+
+    testAnnotationProcessor 'org.projectlombok:lombok:edge-SNAPSHOT'
+
+    testImplementation 'org.projectlombok:lombok:edge-SNAPSHOT'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.mockito:mockito-inline'
+    testImplementation 'org.mockito:mockito-core'
+
+    testRuntime 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+test {
+    useJUnitPlatform()
+    maxParallelForks = Runtime.runtime.availableProcessors()
+}
+
+install {
+    repositories {
+        mavenInstaller {
+            pom {
+                project {
+                    inceptionYear '2020'
+                    licenses {
+                        license {
+                            name 'The Apache Software License, Version 2.0'
+                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            distribution 'https://github.com/Bittuw/reactive-awaiter'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
