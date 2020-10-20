@@ -60,7 +60,8 @@ public final class DefaultSemaphoreContext extends AbstractRootContext implement
      * @param defaultKeyPrefix
      * @param threshold
      */
-    public DefaultSemaphoreContext(@NonNull Object hash, @Nullable Scheduler scheduler, @Nullable String defaultKeyPrefix,
+    public DefaultSemaphoreContext(@NonNull Object hash, @Nullable Scheduler scheduler,
+                                   @Nullable String defaultKeyPrefix,
                                    int threshold)
     {
         super(hash, scheduler, defaultKeyPrefix);
@@ -96,7 +97,7 @@ public final class DefaultSemaphoreContext extends AbstractRootContext implement
                         .flatMap(ignored -> Mono.fromCallable(() -> Mono.<T>error(new NestedContextDenied()))))
                 .switchIfEmpty(Mono.fromCallable(() -> awaitContext(tMono, this)))
                 .flatMap(Mono::from)
-                .subscribeOn(getScheduler())
+                .transformDeferred(ReactiveUtils.isolation(getScheduler()))
                 .doFirst(() -> rate.replace(integer -> integer + 1));
     }
 
@@ -113,7 +114,7 @@ public final class DefaultSemaphoreContext extends AbstractRootContext implement
                         .flatMap(ignored -> Mono.fromCallable(() -> Flux.<T>error(new NestedContextDenied()))))
                 .switchIfEmpty(Mono.fromCallable(() -> awaitContext(tFlux, this)))
                 .flatMapMany(Flux::from)
-                .subscribeOn(getScheduler())
+                .transformDeferred(ReactiveUtils.isolation(getScheduler()))
                 .doFirst(() -> rate.replace(integer -> integer + 1));
     }
 

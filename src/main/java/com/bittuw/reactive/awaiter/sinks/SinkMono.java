@@ -20,10 +20,11 @@ import com.bittuw.reactive.awaiter.support.Response;
 import com.bittuw.reactive.awaiter.support.SinkAdapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import reactor.core.Disposable;
-import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.core.scheduler.Scheduler;
 
 import java.util.function.LongConsumer;
 
@@ -33,13 +34,7 @@ import java.util.function.LongConsumer;
  * @author Nikita Dmitriev {@literal <bittumworker@mail.ru>}
  * @since 02.03.2020
  */
-public class SinkMono<T> extends BaseSubscriber<T> implements CommonSink {
-
-
-    /**
-     *
-     */
-    private final Context context;
+public class SinkMono<T> extends AwaiterSubscriber<T> implements CommonSink {
 
 
     /**
@@ -55,41 +50,32 @@ public class SinkMono<T> extends BaseSubscriber<T> implements CommonSink {
 
 
     /**
-     *
-     */
-    private final SinkAdapter sinkAdapter;
-
-
-    /**
      * @param sink
      * @param publisher
      * @param context
+     * @param scheduler
      */
-    protected SinkMono(@NonNull MonoSink<T> sink, @NonNull Mono<T> publisher, @NonNull Context context)
+    protected SinkMono(@NonNull MonoSink<T> sink, @NonNull Mono<T> publisher, @NonNull Context context,
+                       @Nullable Scheduler scheduler)
     {
+        super(context, scheduler, new SinkMonoAdapter<>(sink));
         this.sink = sink;
         this.publisher = publisher;
-        this.context = context;
-        this.sinkAdapter = new SinkMonoAdapter<>(sink);
-        this.sinkAdapter.onCancel(() -> {
-            context.parent().cancel(context);
-            this.cancel();
-        });
-        this.sinkAdapter.onDispose(() -> context.parent().close(context));
     }
 
 
     /**
      * @param sink
      * @param publisher
-     * @param request
+     * @param scheduler
      * @param context
      * @param <T>
      * @return
      */
-    public static <T> SinkMono<T> of(@NonNull MonoSink<T> sink, @NonNull Mono<T> publisher, @NonNull Context context)
+    public static <T> SinkMono<T> of(@NonNull MonoSink<T> sink, @NonNull Mono<T> publisher, @NonNull Context context,
+                                     @Nullable Scheduler scheduler)
     {
-        return new SinkMono<>(sink, publisher, context);
+        return new SinkMono<>(sink, publisher, context, scheduler);
     }
 
 

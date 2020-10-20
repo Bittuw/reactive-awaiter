@@ -21,10 +21,11 @@ import com.bittuw.reactive.awaiter.support.SinkAdapter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import reactor.core.Disposable;
-import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
+import reactor.core.scheduler.Scheduler;
 
 import java.util.function.LongConsumer;
 
@@ -35,13 +36,7 @@ import java.util.function.LongConsumer;
  * @since 02.03.2020
  */
 @Slf4j
-public class SinkFlux<T> extends BaseSubscriber<T> implements CommonSink {
-
-
-    /**
-     *
-     */
-    private final Context context;
+public class SinkFlux<T> extends AwaiterSubscriber<T> implements CommonSink {
 
 
     /**
@@ -57,27 +52,17 @@ public class SinkFlux<T> extends BaseSubscriber<T> implements CommonSink {
 
 
     /**
-     *
-     */
-    private final SinkAdapter sinkAdapter;
-
-
-    /**
      * @param sink
      * @param publisher
      * @param context
+     * @param scheduler
      */
-    protected SinkFlux(@NonNull FluxSink<T> sink, @NonNull Flux<T> publisher, @NonNull Context context)
+    protected SinkFlux(@NonNull FluxSink<T> sink, @NonNull Flux<T> publisher, @NonNull Context context,
+                       @Nullable Scheduler scheduler)
     {
+        super(context, scheduler, new SinkFluxAdapter<>(sink));
         this.sink = sink;
         this.publisher = publisher;
-        this.context = context;
-        this.sinkAdapter = new SinkFluxAdapter<>(sink);
-        this.sinkAdapter.onCancel(() -> {
-            context.parent().cancel(context);
-            this.cancel();
-        });
-        this.sinkAdapter.onDispose(() -> context.parent().close(context));
     }
 
 
@@ -85,12 +70,14 @@ public class SinkFlux<T> extends BaseSubscriber<T> implements CommonSink {
      * @param sink
      * @param publisher
      * @param context
+     * @param scheduler
      * @param <T>
      * @return
      */
-    public static <T> SinkFlux<T> of(@NonNull FluxSink<T> sink, @NonNull Flux<T> publisher, @NonNull Context context)
+    public static <T> SinkFlux<T> of(@NonNull FluxSink<T> sink, @NonNull Flux<T> publisher, @NonNull Context context,
+                                     @Nullable Scheduler scheduler)
     {
-        return new SinkFlux<>(sink, publisher, context);
+        return new SinkFlux<>(sink, publisher, context, scheduler);
     }
 
 

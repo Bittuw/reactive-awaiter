@@ -84,7 +84,7 @@ public final class DefaultRootAwaitableContext extends AbstractRootContext imple
                 .flatMap(context -> Mono.fromCallable(() -> awaitContext(tMono, context)))
                 .switchIfEmpty(Mono.fromCallable(() -> awaitFallbackContext(tMono, this)))
                 .flatMap(Mono::from)
-                .subscribeOn(getScheduler());
+                .transformDeferred(ReactiveUtils.isolation(getScheduler()));
     }
 
 
@@ -99,7 +99,7 @@ public final class DefaultRootAwaitableContext extends AbstractRootContext imple
                 .flatMap(context -> Mono.fromCallable(() -> awaitContext(tFlux, context)))
                 .switchIfEmpty(Mono.fromCallable(() -> awaitFallbackContext(tFlux, this)))
                 .flatMapMany(Flux::from)
-                .subscribeOn(getScheduler());
+                .transformDeferred(ReactiveUtils.isolation(getScheduler()));
     }
 
 
@@ -116,7 +116,7 @@ public final class DefaultRootAwaitableContext extends AbstractRootContext imple
         if (log.isDebugEnabled())
             log.debug("Generate new context:\n New context: {}\n Parent context: {}", newContext.hash(),
                     parentContext.hash());
-        return Mono.<T>create(sink -> specPush(SinkMono.of(sink, tMono, newContext)))
+        return Mono.<T>create(sink -> specPush(SinkMono.of(sink, tMono, newContext, getScheduler())))
                 .transform(ReactiveUtils.setToContextMono(getChainHashKeyName(), newContext));
     }
 
@@ -134,7 +134,7 @@ public final class DefaultRootAwaitableContext extends AbstractRootContext imple
         if (log.isDebugEnabled())
             log.debug("Generate new context:\n New context: {}\n Parent context: {}", newContext.hash(),
                     parentContext.hash());
-        return Flux.<T>create(sink -> specPush(SinkFlux.of(sink, tFlux, newContext)))
+        return Flux.<T>create(sink -> specPush(SinkFlux.of(sink, tFlux, newContext, getScheduler())))
                 .transform(ReactiveUtils.setToContextFlux(getChainHashKeyName(), newContext));
     }
 
@@ -213,7 +213,7 @@ public final class DefaultRootAwaitableContext extends AbstractRootContext imple
     {
         final var awaitableContext = generateAwaitableContext(this);
         return Flux.<T>create(sink -> {
-            final CommonSink commonSink = SinkFlux.of(sink, tFlux, awaitableContext);
+            final CommonSink commonSink = SinkFlux.of(sink, tFlux, awaitableContext, getScheduler());
             if (nestedAwaitableContext.add(commonSink))
                 commonSink.execute().response();
         });
@@ -230,7 +230,7 @@ public final class DefaultRootAwaitableContext extends AbstractRootContext imple
     {
         final var awaitableContext = generateAwaitableContext(this);
         return Mono.<T>create(sink -> {
-            final CommonSink commonSink = SinkMono.of(sink, tMono, awaitableContext);
+            final CommonSink commonSink = SinkMono.of(sink, tMono, awaitableContext, getScheduler());
             if (nestedAwaitableContext.add(commonSink))
                 commonSink.execute().response();
         });

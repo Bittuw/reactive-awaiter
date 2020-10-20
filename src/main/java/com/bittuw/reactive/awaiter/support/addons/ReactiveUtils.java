@@ -18,11 +18,14 @@ package com.bittuw.reactive.awaiter.support.addons;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
+import reactor.core.scheduler.Scheduler;
 import reactor.util.function.Tuple2;
 
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -73,6 +76,16 @@ public abstract class ReactiveUtils {
 
 
     /**
+     * @param scheduler
+     * @param <T>
+     * @return
+     */
+    public static <T> Function<Publisher<T>, Publisher<T>> isolation(@Nullable Scheduler scheduler) {
+        return tPublisher -> Objects.isNull(scheduler) ? tPublisher : subscribeOn(tPublisher, scheduler);
+    }
+
+
+    /**
      * @param mono
      * @return
      */
@@ -107,5 +120,17 @@ public abstract class ReactiveUtils {
                                                                                  @NonNull Object object)
     {
         return mono -> mono.subscriberContext(context -> context.put(key, object));
+    }
+
+
+    /**
+     * @param tPublisher
+     * @param scheduler
+     * @param <T>
+     * @return
+     */
+    private static <T> Publisher<T> subscribeOn(@NonNull Publisher<T> tPublisher, @NonNull Scheduler scheduler) {
+        if (tPublisher instanceof Mono) return ((Mono<T>) tPublisher).subscribeOn(scheduler);
+        else return ((Flux<T>) tPublisher).subscribeOn(scheduler);
     }
 }

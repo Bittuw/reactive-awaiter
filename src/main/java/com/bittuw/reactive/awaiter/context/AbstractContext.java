@@ -32,7 +32,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import reactor.core.publisher.*;
 import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.Objects;
 
@@ -157,7 +156,7 @@ public abstract class AbstractContext extends BaseSubscriber<CommonSink>
                 .flatMap(context -> Mono.fromCallable(() -> awaitContext(tMono, context)))
                 .switchIfEmpty(Mono.fromCallable(() -> awaitContext(tMono, this)))
                 .flatMap(Mono::from)
-                .subscribeOn(getScheduler());
+                .transformDeferred(ReactiveUtils.isolation(getScheduler()));
     }
 
 
@@ -170,7 +169,7 @@ public abstract class AbstractContext extends BaseSubscriber<CommonSink>
         return ReactiveUtils.getFromContext(getChainHashKeyName(), ContextProcessor.class)
                 .flatMap(context -> Mono.fromCallable(() -> awaitContext(tFlux, context)))
                 .switchIfEmpty(Mono.fromCallable(() -> awaitContext(tFlux, this))).flatMapMany(Flux::from)
-                .subscribeOn(getScheduler());
+                .transformDeferred(ReactiveUtils.isolation(getScheduler()));
     }
 
 
@@ -187,7 +186,7 @@ public abstract class AbstractContext extends BaseSubscriber<CommonSink>
             log.debug("Generate new context: NEW CONTEXT {}, PARENT CONTEXT {}", newContext.hash(),
                     parentContext.hash());
         return Mono.<T>create(
-                sink -> parentContext.push(SinkMono.of(sink, tMono, newContext)))
+                sink -> parentContext.push(SinkMono.of(sink, tMono, newContext, getScheduler())))
                 .transform(ReactiveUtils.setToContextMono(getChainHashKeyName(), newContext));
     }
 
@@ -204,7 +203,7 @@ public abstract class AbstractContext extends BaseSubscriber<CommonSink>
         if (log.isTraceEnabled())
             log.debug("Generate new context: NEW CONTEXT {}, PARENT CONTEXT {}", newContext.hash(),
                     parentContext.hash());
-        return Flux.<T>create(sink -> parentContext.push(SinkFlux.of(sink, tFlux, newContext)))
+        return Flux.<T>create(sink -> parentContext.push(SinkFlux.of(sink, tFlux, newContext, getScheduler())))
                 .transform(ReactiveUtils.setToContextFlux(getChainHashKeyName(), newContext));
     }
 
@@ -266,8 +265,9 @@ public abstract class AbstractContext extends BaseSubscriber<CommonSink>
      * @return
      */
     @Override
+    @Nullable
     public Scheduler getScheduler() {
-        return Objects.isNull(scheduler) ? Schedulers.immediate() : scheduler;
+        return scheduler;
     }
 
 
